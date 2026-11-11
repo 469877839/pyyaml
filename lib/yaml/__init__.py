@@ -71,30 +71,42 @@ def compose_all(stream, Loader=Loader):
     finally:
         loader.dispose()
 
-def load(stream, Loader):
+def load(stream, Loader, strict_mapping_keys=False):
     """
     Parse the first YAML document in a stream
     and produce the corresponding Python object.
+
+    If strict_mapping_keys is true, duplicate explicit keys in a
+    mapping raise ConstructorError instead of silently overwriting
+    earlier values. Keys introduced through merge keys are exempt:
+    explicit keys override merged ones, and earlier merge sources
+    take precedence over later ones.
     """
-    loader = Loader(stream)
+    if strict_mapping_keys:
+        loader = Loader(stream, strict_mapping_keys=True)
+    else:
+        loader = Loader(stream)
     try:
         return loader.get_single_data()
     finally:
         loader.dispose()
 
-def load_all(stream, Loader):
+def load_all(stream, Loader, strict_mapping_keys=False):
     """
     Parse all YAML documents in a stream
     and produce corresponding Python objects.
     """
-    loader = Loader(stream)
+    if strict_mapping_keys:
+        loader = Loader(stream, strict_mapping_keys=True)
+    else:
+        loader = Loader(stream)
     try:
         while loader.check_data():
             yield loader.get_data()
     finally:
         loader.dispose()
 
-def full_load(stream):
+def full_load(stream, strict_mapping_keys=False):
     """
     Parse the first YAML document in a stream
     and produce the corresponding Python object.
@@ -102,9 +114,9 @@ def full_load(stream):
     Resolve all tags except those known to be
     unsafe on untrusted input.
     """
-    return load(stream, FullLoader)
+    return load(stream, FullLoader, strict_mapping_keys=strict_mapping_keys)
 
-def full_load_all(stream):
+def full_load_all(stream, strict_mapping_keys=False):
     """
     Parse all YAML documents in a stream
     and produce corresponding Python objects.
@@ -112,9 +124,9 @@ def full_load_all(stream):
     Resolve all tags except those known to be
     unsafe on untrusted input.
     """
-    return load_all(stream, FullLoader)
+    return load_all(stream, FullLoader, strict_mapping_keys=strict_mapping_keys)
 
-def safe_load(stream):
+def safe_load(stream, strict_mapping_keys=False):
     """
     Parse the first YAML document in a stream
     and produce the corresponding Python object.
@@ -122,9 +134,9 @@ def safe_load(stream):
     Resolve only basic YAML tags. This is known
     to be safe for untrusted input.
     """
-    return load(stream, SafeLoader)
+    return load(stream, SafeLoader, strict_mapping_keys=strict_mapping_keys)
 
-def safe_load_all(stream):
+def safe_load_all(stream, strict_mapping_keys=False):
     """
     Parse all YAML documents in a stream
     and produce corresponding Python objects.
@@ -132,9 +144,9 @@ def safe_load_all(stream):
     Resolve only basic YAML tags. This is known
     to be safe for untrusted input.
     """
-    return load_all(stream, SafeLoader)
+    return load_all(stream, SafeLoader, strict_mapping_keys=strict_mapping_keys)
 
-def unsafe_load(stream):
+def unsafe_load(stream, strict_mapping_keys=False):
     """
     Parse the first YAML document in a stream
     and produce the corresponding Python object.
@@ -142,9 +154,9 @@ def unsafe_load(stream):
     Resolve all tags, even those known to be
     unsafe on untrusted input.
     """
-    return load(stream, UnsafeLoader)
+    return load(stream, UnsafeLoader, strict_mapping_keys=strict_mapping_keys)
 
-def unsafe_load_all(stream):
+def unsafe_load_all(stream, strict_mapping_keys=False):
     """
     Parse all YAML documents in a stream
     and produce corresponding Python objects.
@@ -152,7 +164,7 @@ def unsafe_load_all(stream):
     Resolve all tags, even those known to be
     unsafe on untrusted input.
     """
-    return load_all(stream, UnsafeLoader)
+    return load_all(stream, UnsafeLoader, strict_mapping_keys=strict_mapping_keys)
 
 def emit(events, stream=None, Dumper=Dumper,
         canonical=None, indent=None, width=None,

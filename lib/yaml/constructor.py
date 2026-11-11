@@ -21,11 +21,14 @@ class BaseConstructor:
     yaml_constructors = {}
     yaml_multi_constructors = {}
 
-    def __init__(self):
+    def __init__(self, strict_mapping_keys=False):
         self.constructed_objects = {}
         self.recursive_objects = {}
         self.state_generators = []
         self.deep_construct = False
+        # When enabled, `construct_mapping` raises ConstructorError on
+        # duplicate explicit keys instead of silently overwriting them.
+        self.strict_mapping_keys = strict_mapping_keys
 
     def check_data(self):
         # If there are more documents available?
@@ -129,11 +132,81 @@ class BaseConstructor:
         return [self.construct_object(child, deep=deep)
                 for child in node.value]
 
+    def check_duplicate_keys(self, node, key_pairs, merge_sources=(),
+            merge_nodes=None):
+        # Validate explicit mapping keys while the representation tree still
+        # holds every key node and its mark; a plain dict cannot do this once
+        # colliding keys have overwritten each other. Keys are compared after
+        # construction, i.e. by Python `==`/hash semantics, so e.g. `true` and
+        # `1` collide (True == 1) while `!!str 1` and `1` do not. Entries
+        # pulled in through merge keys are never flagged as duplicates of the
+        # explicit keys here: explicit keys override merged ones, and earlier
+        # merge sources take precedence over later ones.
+        if not self.strict_mapping_keys:
+            return
+        self._check_explicit_key_pairs(node, key_pairs)
+        if merge_nodes is None:
+            merge_nodes = set()
+        for source in merge_sources:
+            self._check_merge_source(source, merge_nodes, set())
+
+    def _check_explicit_key_pairs(self, node, key_pairs):
+        seen = {}
+        for key_node, dummy in key_pairs:
+            key = self.construct_object(key_node, deep=True)
+            if not isinstance(key, collections.abc.Hashable):
+                raise ConstructorError("while constructing a mapping", node.start_mark,
+                        "found unhashable key", key_node.start_mark)
+            previous = seen.get(key)
+            if previous is not None:
+                prev_node, prev_key = previous
+                raise ConstructorError("while constructing a mapping",
+                        node.start_mark,
+                        "found duplicate key %r" % (key,),
+                        key_node.start_mark,
+                        "key %r was first explicitly defined at:\n%s"
+                        % (prev_key, prev_node.start_mark))
+            seen[key] = (key_node, key)
+
+    def _check_merge_source(self, node, merge_nodes, visiting):
+        # Walk the explicit keys of a merge source (and its nested merge
+        # sources) so inline mappings used only as merge targets are validated
+        # too. Each mapping gets its own key set: keys from different merge
+        # sources or from the merging mapping itself are precedence overrides,
+        # not duplicates. Aliased mappings may be reached from several places;
+        # the `visiting`/`merge_nodes` guards keep anchor cycles and repeated
+        # inclusions such as `<<: [*base, *base]` terminating.
+        if id(node) in merge_nodes or id(node) in visiting:
+            return
+        visiting.add(id(node))
+        explicit = []
+        nested = []
+        for key_node, value_node in node.value:
+            if key_node.tag == 'tag:yaml.org,2002:merge':
+                if isinstance(value_node, MappingNode):
+                    nested.append(value_node)
+                elif isinstance(value_node, SequenceNode):
+                    nested.extend(subnode for subnode in value_node.value
+                            if isinstance(subnode, MappingNode))
+            else:
+                if key_node.tag == 'tag:yaml.org,2002:value':
+                    key_node.tag = 'tag:yaml.org,2002:str'
+                explicit.append((key_node, value_node))
+        self._check_explicit_key_pairs(node, explicit)
+        for subnode in nested:
+            self._check_merge_source(subnode, merge_nodes, visiting)
+        visiting.discard(id(node))
+        merge_nodes.add(id(node))
+
     def construct_mapping(self, node, deep=False):
         if not isinstance(node, MappingNode):
             raise ConstructorError(None, None,
                     "expected a mapping node, but found %s" % node.id,
                     node.start_mark)
+        self.check_duplicate_keys(node, node.value)
+        return self._construct_mapping(node, deep)
+
+    def _construct_mapping(self, node, deep=False):
         mapping = {}
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
@@ -216,9 +289,31 @@ class SafeConstructor(BaseConstructor):
             node.value = merge + node.value
 
     def construct_mapping(self, node, deep=False):
-        if isinstance(node, MappingNode):
-            self.flatten_mapping(node)
-        return super().construct_mapping(node, deep=deep)
+        if not isinstance(node, MappingNode):
+            raise ConstructorError(None, None,
+                    "expected a mapping node, but found %s" % node.id,
+                    node.start_mark)
+        if self.strict_mapping_keys:
+            explicit_pairs = []
+            merge_sources = []
+            for key_node, value_node in node.value:
+                if key_node.tag == 'tag:yaml.org,2002:merge':
+                    if isinstance(value_node, MappingNode):
+                        merge_sources.append(value_node)
+                    elif isinstance(value_node, SequenceNode):
+                        merge_sources.extend(subnode for subnode
+                                in value_node.value
+                                if isinstance(subnode, MappingNode))
+                else:
+                    # Mirror the rewrite flatten_mapping performs so the
+                    # check constructs exactly the keys the mapping will get.
+                    if key_node.tag == 'tag:yaml.org,2002:value':
+                        key_node.tag = 'tag:yaml.org,2002:str'
+                    explicit_pairs.append((key_node, value_node))
+            self.check_duplicate_keys(node, explicit_pairs,
+                    merge_sources=merge_sources)
+        self.flatten_mapping(node)
+        return self._construct_mapping(node, deep=deep)
 
     def construct_yaml_null(self, node):
         self.construct_scalar(node)

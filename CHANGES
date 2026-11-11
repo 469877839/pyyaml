@@ -5,7 +5,16 @@ For a complete changelog, see:
 
 7.0.0.dev0 (TBD)
 
-* TBD
+* Add optional strict mapping key checking: pass `strict_mapping_keys=True`
+  to `load`/`load_all`/`safe_load`/`full_load`/`unsafe_load` (or to any
+  Loader constructor) to raise `ConstructorError` on duplicate explicit
+  mapping keys instead of silently overwriting earlier values. The error
+  reports both key positions with their original marks. Keys contributed
+  through merge keys are exempt: explicit keys override merged ones, and
+  earlier merge sources take precedence over later ones. Keys are compared
+  after construction (Python `==`/hash semantics), so e.g. `true` and `1`
+  collide while `!!str 1` and `1` do not. Unhashable keys keep raising the
+  existing error. The default behavior is unchanged.
 
 6.0.2 (2024-08-06)
 

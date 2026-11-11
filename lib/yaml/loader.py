@@ -10,42 +10,42 @@ from .resolver import *
 
 class BaseLoader(Reader, Scanner, Parser, Composer, BaseConstructor, BaseResolver):
 
-    def __init__(self, stream):
+    def __init__(self, stream, strict_mapping_keys=False):
         Reader.__init__(self, stream)
         Scanner.__init__(self)
         Parser.__init__(self)
         Composer.__init__(self)
-        BaseConstructor.__init__(self)
+        BaseConstructor.__init__(self, strict_mapping_keys=strict_mapping_keys)
         BaseResolver.__init__(self)
 
 class FullLoader(Reader, Scanner, Parser, Composer, FullConstructor, Resolver):
 
-    def __init__(self, stream):
+    def __init__(self, stream, strict_mapping_keys=False):
         Reader.__init__(self, stream)
         Scanner.__init__(self)
         Parser.__init__(self)
         Composer.__init__(self)
-        FullConstructor.__init__(self)
+        FullConstructor.__init__(self, strict_mapping_keys=strict_mapping_keys)
         Resolver.__init__(self)
 
 class SafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Resolver):
 
-    def __init__(self, stream):
+    def __init__(self, stream, strict_mapping_keys=False):
         Reader.__init__(self, stream)
         Scanner.__init__(self)
         Parser.__init__(self)
         Composer.__init__(self)
-        SafeConstructor.__init__(self)
+        SafeConstructor.__init__(self, strict_mapping_keys=strict_mapping_keys)
         Resolver.__init__(self)
 
 class Loader(Reader, Scanner, Parser, Composer, Constructor, Resolver):
 
-    def __init__(self, stream):
+    def __init__(self, stream, strict_mapping_keys=False):
         Reader.__init__(self, stream)
         Scanner.__init__(self)
         Parser.__init__(self)
         Composer.__init__(self)
-        Constructor.__init__(self)
+        Constructor.__init__(self, strict_mapping_keys=strict_mapping_keys)
         Resolver.__init__(self)
 
 # UnsafeLoader is the same as Loader (which is and was always unsafe on
@@ -54,10 +54,10 @@ class Loader(Reader, Scanner, Parser, Composer, Constructor, Resolver):
 # to ensure backwards compatibility.
 class UnsafeLoader(Reader, Scanner, Parser, Composer, Constructor, Resolver):
 
-    def __init__(self, stream):
+    def __init__(self, stream, strict_mapping_keys=False):
         Reader.__init__(self, stream)
         Scanner.__init__(self)
         Parser.__init__(self)
         Composer.__init__(self)
-        Constructor.__init__(self)
+        Constructor.__init__(self, strict_mapping_keys=strict_mapping_keys)
         Resolver.__init__(self)
