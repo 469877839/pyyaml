@@ -24,6 +24,36 @@ If you don't trust the input YAML stream, you should use:
 
     >>> yaml.safe_load(stream)
 
+## Recovering multiple documents
+
+A stream with several YAML documents may contain one corrupted document.
+`yaml.load_all` stops at the first error; `yaml.load_all_recover` instead
+yields either the value or a `yaml.DocumentRecoveryError` for every document:
+
+    >>> for item in yaml.safe_load_all_recover(stream):
+    ...     if isinstance(item, yaml.DocumentRecoveryError):
+    ...         print("discarded", item.discarded_start, item.discarded_end)
+    ...     else:
+    ...         print(item)
+
+Recovery resumes only at provable document boundaries (a `---` or `...`
+indicator at column 0 followed by whitespace or end of input), so quoted
+scalars and block scalars cannot be mistaken for separators.  Each document
+gets a fresh loader, so directives, tag handles and anchors never leak into
+the next document.  `DocumentRecoveryError` carries the failing document
+index, the input position of the error and the discarded input range.
+`max_scan_chars` bounds how much is scanned after a failure before the next
+boundary; exceeding it yields `yaml.RecoveryAborted` and stops iteration.
+Inputs are consumed lazily, so a large file is not read before the first
+document is returned.
+
+Some corruption cannot be recovered safely and is reported instead of
+guessed: a directive without an adjacent `---` (a plain scalar may legally
+continue through it), free content after `...` without a new `---`, damage
+inside the first implicit document before any boundary, and streams whose
+only separators are indented (and therefore not actual indicators).  See the
+`yaml.recovery` module docstring for the full list.
+
 ## Testing
 
 PyYAML includes a comprehensive test suite.

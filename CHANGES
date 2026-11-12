@@ -5,7 +5,15 @@ For a complete changelog, see:
 
 7.0.0.dev0 (TBD)
 
-* TBD
+* Add `yaml.load_all_recover` / `yaml.safe_load_all_recover`: a recovery-based
+  multi-document loader that yields a value or a `yaml.DocumentRecoveryError`
+  per document instead of aborting the stream at the first corrupted document.
+  Recovery resumes only at provable document boundaries (column-0 `---` /
+  `...` indicators), restarts directives, tag handles and anchors for each
+  document, bounds the amount scanned while searching for the next boundary
+  (`max_scan_chars`, yielding `yaml.RecoveryAborted` when exceeded), and
+  consumes file-like inputs lazily.  `yaml.load_all` keeps its existing
+  stop-on-error behavior.
 
 6.0.2 (2024-08-06)
 
