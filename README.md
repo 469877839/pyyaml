@@ -24,6 +24,27 @@ If you don't trust the input YAML stream, you should use:
 
     >>> yaml.safe_load(stream)
 
+## YAML 1.2 core schema
+
+The default loaders follow the YAML 1.1 implicit resolution rules, so plain
+scalars such as `on`/`yes` become booleans and `0123` is parsed as an octal
+integer.  Explicitly choose the YAML 1.2 core schema with the opt-in
+`YAML12SafeLoader`/`YAML12SafeDumper` classes (or the `yaml12_*` helpers);
+the default `SafeLoader`/`Loader` behavior is unchanged.
+
+    >>> yaml.yaml12_load('on')          # 'on' (a string)
+    >>> yaml.yaml12_load('0123')        # 123 (decimal, not octal 83)
+    >>> yaml.yaml12_load('0o17')        # 15
+    >>> yaml.yaml12_load('0b1010')      # '0b1010' (no binary integers)
+    >>> yaml.yaml12_load('2001-12-15')  # '2001-12-15' (no implicit timestamp)
+
+Each loader instance gets its own resolver table, so selecting the core
+schema for one loader never affects other loaders.  Explicit tags bypass
+implicit resolution: `!!str 0123` always yields the string `'0123'`, and
+`!!timestamp 2001-12-15` still builds a `datetime.date`.  Use
+`YAML12SafeDumper` (via `yaml12_dump`/`yaml12_dump_all`) so output reloaded
+with `YAML12SafeLoader` keeps the same values and types.
+
 ## Testing
 
 PyYAML includes a comprehensive test suite.

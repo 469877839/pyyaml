@@ -7,6 +7,7 @@ from .nodes import *
 
 from .loader import *
 from .dumper import *
+from .schema import *
 
 __version__ = '7.0.0.dev0'
 try:
@@ -267,6 +268,41 @@ def safe_dump(data, stream=None, **kwds):
     If stream is None, return the produced string instead.
     """
     return dump_all([data], stream, Dumper=SafeDumper, **kwds)
+
+def yaml12_load(stream):
+    """
+    Parse the first YAML document in a stream with the YAML 1.2 core
+    schema and produce the corresponding Python object.
+
+    Plain scalars follow the YAML 1.2 core resolution rules instead of the
+    YAML 1.1 rules used by :class:`SafeLoader`.  Explicit tags are honored
+    regardless of the implicit resolution schema.
+    """
+    return load(stream, YAML12SafeLoader)
+
+def yaml12_load_all(stream):
+    """
+    Parse all YAML documents in a stream with the YAML 1.2 core schema
+    and produce corresponding Python objects.
+    """
+    return load_all(stream, YAML12SafeLoader)
+
+def yaml12_dump(data, stream=None, **kwds):
+    """
+    Serialize a Python object into a YAML stream using the YAML 1.2 core
+    resolution rules, so the output reloads to the same values and types
+    with :class:`YAML12SafeLoader`.
+    If stream is None, return the produced string instead.
+    """
+    return dump_all([data], stream, Dumper=YAML12SafeDumper, **kwds)
+
+def yaml12_dump_all(documents, stream=None, **kwds):
+    """
+    Serialize a sequence of Python objects into a YAML stream using the
+    YAML 1.2 core resolution rules.
+    If stream is None, return the produced string instead.
+    """
+    return dump_all(documents, stream, Dumper=YAML12SafeDumper, **kwds)
 
 def add_implicit_resolver(tag, regexp, first=None,
         Loader=None, Dumper=Dumper):

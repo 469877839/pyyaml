@@ -5,7 +5,12 @@ For a complete changelog, see:
 
 7.0.0.dev0 (TBD)
 
-* TBD
+* Add opt-in YAML 1.2 core schema loaders/dumpers (`YAML12SafeLoader`,
+  `YAML12FullLoader`, `YAML12Loader`, `YAML12SafeDumper`, `YAML12Dumper`,
+  and the `yaml12_load`/`yaml12_load_all`/`yaml12_dump`/`yaml12_dump_all`
+  helpers).  The core resolver configuration is attached to each loader
+  instance, so the default YAML 1.1 `SafeLoader`/`Loader` behavior is
+  unchanged; explicit tags continue to override implicit resolution.
 
 6.0.2 (2024-08-06)
 
